@@ -1,0 +1,1 @@
+# Terminal text editor with Markdown syntax support
