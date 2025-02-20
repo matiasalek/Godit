@@ -1,5 +1,1 @@
-# Terminal text editor with Markdown syntax support
-## Key goals:
-. in-terminal text editor
-. vim-macros
-. markdown syntax support?
+# Vim-like terminal text editor made with Go
