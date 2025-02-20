@@ -34,7 +34,6 @@ func (m EditorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.content += string(msg.Runes)
 			}
 		}
-		// For now, just mirror content to preview
 		m.preview = m.content
 
 	case tea.WindowSizeMsg:
