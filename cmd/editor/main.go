@@ -5,75 +5,94 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
-type EditorModel struct {
-	content string
-	preview string
-	width   int
-	height  int
+type model struct {
+	choices  []string         // items on the to-do list
+	cursor   int              // which to-do list item our cursor is pointing at
+	selected map[int]struct{} // which to-do items are selected
 }
 
-func (m EditorModel) Init() tea.Cmd {
+func initialModel() model {
+	return model{
+		// Our to-do list is a grocery list
+		choices: []string{"Buy carrots", "Buy celery", "Buy kohlrabi"},
+
+		// A map which indicates which choices are selected. We're using
+		// the map like a mathematical set. The keys refer to the indexes
+		// of the `choices` slice, above.
+		selected: make(map[int]struct{}),
+
+		// map in go
+		// slices in go
+	}
+}
+
+func (m model) Init() tea.Cmd {
+	// Just return `nil`, which means "no I/O right now, please."
 	return nil
 }
 
-func (m EditorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "q":
 			return m, tea.Quit
-		case "backspace":
-			if len(m.content) > 0 {
-				m.content = m.content[:len(m.content)-1]
+		case "k":
+			if m.cursor > 0 {
+				m.cursor--
 			}
-		default:
-			if msg.Type == tea.KeyRunes {
-				m.content += string(msg.Runes)
+		case "j":
+			if m.cursor < len(m.choices)-1 {
+				m.cursor++
+			}
+
+		// The "enter" key and the spacebar (a literal space) toggle
+		// the selected state for the item that the cursor is pointing at.
+		case "enter", " ":
+			_, ok := m.selected[m.cursor]
+			if ok {
+				delete(m.selected, m.cursor)
+			} else {
+				m.selected[m.cursor] = struct{}{}
 			}
 		}
-		m.preview = m.content
-
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
 	}
-
 	return m, nil
 }
 
-func (m EditorModel) View() string {
-	// Basic split screen
-	leftStyle := lipgloss.NewStyle().
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderRight(true).
-		Width(m.width/2 - 1).
-		Height(m.height - 2)
+func (m model) View() string {
+	s := "What should we buy at the market?\n\n"
+	for i, choice := range m.choices {
 
-	rightStyle := lipgloss.NewStyle().
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderLeft(true).
-		Width(m.width/2 - 1).
-		Height(m.height - 2)
+		// Is the cursor pointing at this choice?
+		cursor := " " // no cursor
+		if m.cursor == i {
+			cursor = ">" // cursor!
+		}
 
-	return lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		leftStyle.Render(m.content),
-		rightStyle.Render(m.preview),
-	)
+		// Is this choice selected?
+		checked := " " // not selected
+		if _, ok := m.selected[i]; ok {
+			checked = "x" // selected!
+		}
+
+		// Render the row
+		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
+	}
+
+	// The footer
+	s += "\nPress q to quit.\n"
+
+	// Send the UI for rendering
+	return s
 }
 
 func main() {
-	p := tea.NewProgram(
-		EditorModel{},
-		tea.WithAltScreen(),       // Use alternate screen buffer
-		tea.WithMouseCellMotion(), // Enable mouse support
-	)
-
+	p := tea.NewProgram(initialModel())
 	if _, err := p.Run(); err != nil {
-		fmt.Printf("Error running program: %v", err)
+		fmt.Printf("Alas, there's been an error: %v", err)
 		os.Exit(1)
 	}
 }
