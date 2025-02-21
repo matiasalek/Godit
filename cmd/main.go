@@ -3,8 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
+	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -16,27 +15,20 @@ const (
 )
 
 type model struct {
-	viewport  viewport.Model
-	textInput textinput.Model
-	mode      mode
-	ready     bool
+	textArea textarea.Model
+	mode     mode
+	ready    bool
 }
 
 func initialModel() model {
-	vp := viewport.New(20, 10) // Initial placeholder size
-	vp.SetContent("This is the viewport.\nUse 'i' to enter insert mode.\nPress 'Esc' to return to normal mode.")
-
-	ti := textinput.New()
-	ti.Placeholder = "Insert text here..."
-	ti.Prompt = ":"
-	ti.CharLimit = 256
-	ti.Focus()
+	ta := textarea.New()
+	ta.Placeholder = "CTRL + C to quit. i to insert. esc to normal mode"
+	ta.ShowLineNumbers = true
 
 	return model{
-		viewport:  vp,
-		textInput: ti,
-		mode:      normal,
-		ready:     false,
+		textArea: ta,
+		mode:     normal,
+		ready:    false,
 	}
 }
 
@@ -57,28 +49,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "i":
 			if m.mode == normal {
 				m.mode = insert
-				m.textInput.Focus()
+				m.textArea.Focus()
+				m.textArea.Reset() // Clear textarea to avoid showing 'i'
+				return m, textarea.Blink
 			}
 
 		case "esc":
 			if m.mode == insert {
 				m.mode = normal
-				m.textInput.Blur()
+				m.textArea.Blur()
+				return m, nil
 			}
 		}
 
 		if m.mode == insert {
 			var cmd tea.Cmd
-			m.textInput, cmd = m.textInput.Update(msg)
+			m.textArea, cmd = m.textArea.Update(msg)
 			return m, cmd
-		} else {
-			m.viewport, _ = m.viewport.Update(msg)
 		}
 
 	case tea.WindowSizeMsg:
-		inputHeight := 1 // Height of the input line
-		m.viewport.Width = msg.Width
-		m.viewport.Height = msg.Height - inputHeight
+		m.textArea.SetWidth(msg.Width)
+		m.textArea.SetHeight(msg.Height - 1)
 		m.ready = true
 	}
 
@@ -90,9 +82,9 @@ func (m model) View() string {
 		return "Loading..."
 	}
 	if m.mode == insert {
-		return m.textInput.View() + "\n" + m.viewport.View()
+		return m.textArea.View()
 	}
-	return m.viewport.View()
+	return m.textArea.View()
 }
 
 func main() {
