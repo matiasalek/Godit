@@ -13,15 +13,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.mode == normal {
 				m.mode = insert
 				m.textArea.Focus()
-				m.textArea.Reset() // Clear textarea to avoid showing 'i'
-
 				return m, tea.Batch(tea.EnterAltScreen, tea.ClearScreen)
 			}
 
 		case "esc":
 			if m.mode == insert {
 				m.mode = normal
-				m.textArea.Blur()
 				return m, nil
 			}
 		}
