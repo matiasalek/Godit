@@ -43,7 +43,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
 			return m, tea.Quit
 
 		case "i":
@@ -51,7 +51,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.mode = insert
 				m.textArea.Focus()
 				m.textArea.Reset() // Clear textarea to avoid showing 'i'
-				return m, textarea.Blink
+
+				return m, tea.Batch(tea.EnterAltScreen, tea.ClearScreen)
 			}
 
 		case "esc":
@@ -78,13 +79,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	if !m.ready {
-		return "Loading..."
-	}
+	textView := m.textArea.View()
+
+	status := ""
 	if m.mode == insert {
-		return m.textArea.View()
+		status = " -- INSERT -- "
+	} else {
+		status = " -- NORMAL -- "
 	}
-	return m.textArea.View()
+	return textView + "\n" + status
 }
 
 func main() {
