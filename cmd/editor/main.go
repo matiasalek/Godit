@@ -2,97 +2,103 @@ package main
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type mode int
+
+const (
+	normal mode = iota
+	insert
+)
+
 type model struct {
-	choices  []string         // items on the to-do list
-	cursor   int              // which to-do list item our cursor is pointing at
-	selected map[int]struct{} // which to-do items are selected
+	viewport  viewport.Model
+	textInput textinput.Model
+	mode      mode
+	ready     bool
 }
 
 func initialModel() model {
+	vp := viewport.New(20, 10) // Initial placeholder size
+	vp.SetContent("This is the viewport.\nUse 'i' to enter insert mode.\nPress 'Esc' to return to normal mode.")
+
+	ti := textinput.New()
+	ti.Placeholder = "Insert text here..."
+	ti.Prompt = ":"
+	ti.CharLimit = 256
+	ti.Focus()
+
 	return model{
-		// Our to-do list is a grocery list
-		choices: []string{"Buy carrots", "Buy celery", "Buy kohlrabi"},
-
-		// A map which indicates which choices are selected. We're using
-		// the map like a mathematical set. The keys refer to the indexes
-		// of the `choices` slice, above.
-		selected: make(map[int]struct{}),
-
-		// map in go
-		// slices in go
+		viewport:  vp,
+		textInput: ti,
+		mode:      normal,
+		ready:     false,
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	// Just return `nil`, which means "no I/O right now, please."
-	return nil
+	return tea.Batch(
+		tea.EnterAltScreen,
+		tea.ClearScreen,
+	)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q":
+		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case "j":
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
+
+		case "i":
+			if m.mode == normal {
+				m.mode = insert
+				m.textInput.Focus()
 			}
 
-		// The "enter" key and the spacebar (a literal space) toggle
-		// the selected state for the item that the cursor is pointing at.
-		case "enter", " ":
-			_, ok := m.selected[m.cursor]
-			if ok {
-				delete(m.selected, m.cursor)
-			} else {
-				m.selected[m.cursor] = struct{}{}
+		case "esc":
+			if m.mode == insert {
+				m.mode = normal
+				m.textInput.Blur()
 			}
 		}
+
+		if m.mode == insert {
+			var cmd tea.Cmd
+			m.textInput, cmd = m.textInput.Update(msg)
+			return m, cmd
+		} else {
+			m.viewport, _ = m.viewport.Update(msg)
+		}
+
+	case tea.WindowSizeMsg:
+		inputHeight := 1 // Height of the input line
+		m.viewport.Width = msg.Width
+		m.viewport.Height = msg.Height - inputHeight
+		m.ready = true
 	}
+
 	return m, nil
 }
 
 func (m model) View() string {
-	s := "What should we buy at the market?\n\n"
-	for i, choice := range m.choices {
-
-		// Is the cursor pointing at this choice?
-		cursor := " " // no cursor
-		if m.cursor == i {
-			cursor = ">" // cursor!
-		}
-
-		// Is this choice selected?
-		checked := " " // not selected
-		if _, ok := m.selected[i]; ok {
-			checked = "x" // selected!
-		}
-
-		// Render the row
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
+	if !m.ready {
+		return "Loading..."
 	}
-
-	// The footer
-	s += "\nPress q to quit.\n"
-
-	// Send the UI for rendering
-	return s
+	if m.mode == insert {
+		return m.textInput.View() + "\n" + m.viewport.View()
+	}
+	return m.viewport.View()
 }
 
 func main() {
-	p := tea.NewProgram(initialModel())
-	if _, err := p.Run(); err != nil {
-		fmt.Printf("Alas, there's been an error: %v", err)
-		os.Exit(1)
+	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
+	if err := p.Start(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
 	}
 }
