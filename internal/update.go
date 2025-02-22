@@ -32,9 +32,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "j":
 				m.textArea.CursorDown()
 			case "h":
-				m.textArea.SetCursor(-1)
+				m.textArea.CursorStart()
 			case "l":
-				m.textArea.SetCursor(1)
+				m.textArea.CursorEnd()
 			}
 		}
 
