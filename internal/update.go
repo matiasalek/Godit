@@ -1,6 +1,12 @@
 package internal
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+	"time"
+
+	"os"
+	"strings"
+)
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -22,6 +28,50 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "esc" && m.mode == insert {
 			m.mode = normal
 			return m, nil
+		}
+
+		if msg.String() == ":" && m.mode == normal {
+			m.mode = command
+			m.commandInput = ""
+			return m, nil
+		}
+
+		// Command mode input handling
+		if m.mode == command {
+			switch msg.String() {
+			case "enter":
+				if strings.HasPrefix(m.commandInput, "w ") {
+					// Save file logic
+					filename := strings.TrimSpace(strings.TrimPrefix(m.commandInput, "w "))
+					err := os.WriteFile(filename, []byte(m.textArea.Value()), 0644)
+					if err != nil {
+						m.statusMessage = "Error saving file: " + err.Error()
+					} else {
+						m.statusMessage = "File saved: " + filename
+					}
+					return m, tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
+						return clearStatusMsg{}
+					})
+				}
+				m.mode = normal
+				m.commandInput = ""
+				return m, nil
+
+			case "esc":
+				m.mode = normal
+				m.commandInput = ""
+				return m, nil
+
+			case "backspace":
+				if len(m.commandInput) > 0 {
+					m.commandInput = m.commandInput[:len(m.commandInput)-1]
+				}
+				return m, nil
+
+			default:
+				m.commandInput += msg.String()
+				return m, nil
+			}
 		}
 
 		// Handle cursor movement only in normal mode
@@ -49,7 +99,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.textArea.SetWidth(msg.Width)
 		m.textArea.SetHeight(msg.Height - 1)
 		m.ready = true
-	}
 
+	case clearStatusMsg:
+		m.statusMessage = ""
+		return m, nil
+
+	}
 	return m, nil
 }
+
+type clearStatusMsg struct{}

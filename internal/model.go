@@ -9,12 +9,15 @@ type mode int
 const (
 	normal mode = iota
 	insert
+	command
 )
 
 type model struct {
-	textArea textarea.Model
-	mode     mode
-	ready    bool
+	textArea      textarea.Model
+	mode          mode
+	commandInput  string
+	statusMessage string
+	ready         bool
 }
 
 func InitialModel() model {

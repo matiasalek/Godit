@@ -4,10 +4,18 @@ func (m model) View() string {
 	textView := m.textArea.View()
 
 	status := ""
-	if m.mode == insert {
+	switch m.mode {
+	case insert:
 		status = " -- INSERT -- "
-	} else {
+	case normal:
 		status = " -- NORMAL -- "
+	case command:
+		status = ":" + m.commandInput
 	}
+
+	if m.statusMessage != "" {
+		status += " | " + m.statusMessage
+	}
+
 	return textView + "\n" + status
 }
