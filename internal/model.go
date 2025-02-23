@@ -22,7 +22,7 @@ type model struct {
 
 func InitialModel() model {
 	ta := textarea.New()
-	ta.Placeholder = "CTRL + C to quit. i to insert. esc to normal mode"
+	ta.Placeholder = ":q to exit. i to insert. esc to normal mode"
 	ta.ShowLineNumbers = true
 
 	return model{

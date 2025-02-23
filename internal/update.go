@@ -12,11 +12,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
-		// Quit
-		if msg.String() == "ctrl+c" {
-			return m, tea.Quit
-		}
-
 		// Enter insert mode
 		if msg.String() == "i" && m.mode == normal {
 			m.mode = insert
@@ -40,22 +35,38 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.mode == command {
 			switch msg.String() {
 			case "enter":
-				if strings.HasPrefix(m.commandInput, "w ") {
-					// Save file logic
-					filename := strings.TrimSpace(strings.TrimPrefix(m.commandInput, "w "))
+				trimmedInput := strings.TrimSpace(m.commandInput)
+
+				// Handle file save with ":w filename"
+				if strings.HasPrefix(trimmedInput, ":w ") {
+					filename := strings.TrimSpace(strings.TrimPrefix(trimmedInput, ":w "))
 					err := os.WriteFile(filename, []byte(m.textArea.Value()), 0644)
 					if err != nil {
 						m.statusMessage = "Error saving file: " + err.Error()
 					} else {
 						m.statusMessage = "File saved: " + filename
 					}
+
+					// Clear the status message after 2 seconds
+					m.commandInput = ""
+					m.mode = normal
 					return m, tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
 						return clearStatusMsg{}
 					})
 				}
-				m.mode = normal
+
+				// Handle quit with ":q"
+				if trimmedInput == "q" {
+					return m, tea.Quit
+				}
+
+				// Unrecognized command, return to normal mode
+				m.statusMessage = "Unknown command: " + trimmedInput
 				m.commandInput = ""
-				return m, nil
+				m.mode = normal
+				return m, tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
+					return clearStatusMsg{}
+				})
 
 			case "esc":
 				m.mode = normal
