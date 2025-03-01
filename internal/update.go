@@ -90,6 +90,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textArea.CursorUp()
 			case "j":
 				m.textArea.CursorDown()
+			case "h":
+				m.textArea.CursorStart()
+			case "l":
+				m.textArea.CursorEnd()
 			}
 		}
 
