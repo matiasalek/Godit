@@ -10,7 +10,6 @@ import (
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-
 	case tea.KeyMsg:
 		// Quit
 		if msg.String() == "ctrl+c" {
@@ -91,10 +90,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textArea.CursorUp()
 			case "j":
 				m.textArea.CursorDown()
-			case "h":
-				m.textArea.CursorStart()
-			case "l":
-				m.textArea.CursorEnd()
 			}
 		}
 
