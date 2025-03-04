@@ -1,8 +1,9 @@
 package internal
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 
 	"os"
 	"strings"
